@@ -132,10 +132,10 @@ int main(int argc,char *argv[]){
                     if(OWDist < Dist){
 						dipole(OX,OY,OZ,H1X,H1Y,H1Z,H2X,H2Y,H2Z);
                         MAGNITUDE(X,Y,Z);
-						Dip[j][3*(k+1)-3]=X/MAG;
+						Dip[j][3*(k+1)-3]=X/MAG; /*Make Unit Vector*/
 						Dip[j][3*(k+1)-2]=Y/MAG;
 						Dip[j][3*(k+1)-1]=Z/MAG;
-                        num1[j]+=1;
+                        num1[j]+=1; /*Number of water is pore at this timestep*/
                     }
                 }
 				fgets(buf,180,fp); //Get Last line In Frame of Grofile//
@@ -143,31 +143,54 @@ int main(int argc,char *argv[]){
 			
             
 			//Correlation Function//
-          
+            double sum,norm,clock,icor;
 			for(tau=0;tau<MaxTau;tau++){
                 AC[tau]=0.0;
+                for(k=0;k<Nsol;k++){
+                    icor=0.0;
+                    sum=0.0;
+                    clock=0.0;
+                    norm=0.0;
                 	for(j=0;j<MaxTau-tau;j++){
-                        for(k=0;k<Nsol;k++){
+                                //Pore Residence Clock//
+                                if(Dip[j][3*(k+1)-1]!=0.0){
+                                    clock+=1.0;
+                                    norm+=1.0;
+                                }
+            
                                 //Pore Correlation//
-                                if(Dip[j][3*(k+1)-1]!=0.0  && Dip[j+tau][3*(k+1)-1]!=0.0 ) {
+                                if(clock > 0.0 && Dip[j+tau][3*(k+1)-1]!=0.0 ) {
 									CX = Dip[j][3*(k+1)-3]*Dip[j+tau][3*(k+1)-3];
 									CY = Dip[j][3*(k+1)-2]*Dip[j+tau][3*(k+1)-2];
 									CZ = Dip[j][3*(k+1)-1]*Dip[j+tau][3*(k+1)-1];
 									AutoCorr(CX,CY,CZ);
-                                    AC[tau]+=(Corr/num1[j]);
-                                
+                                    sum+=Corr;
                             }
-                         
-                        }
-                
+                        
+                        
+                                //Reset Clock//
+                                if(clock > 0.0 && Dip[j][3*(k+1)-1]==0.0){
+                                    clock=0.0;
+                                }
+                                
+                                
                     }
-             
-                AC[tau]/=(MaxTau-tau);
+                
+            
+                    icor += sum/norm;
+                    
+                    if(norm!=0.0) AC[tau]+=icor;
+
+                    
+                    
+                }
+            
 			}
 			
+            
             //Collect in Corr array//
             for(tau=0;tau<MaxTau;tau++){
-				Dip_corrI[tau] += AC[tau];
+				Dip_corrI[tau] += AC[tau]/AC[0];
             }
 		
 		
